@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory - Blood Bank Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">🩸 Blood Bank</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/donors">Donors</a></li>
+            <li><a href="/donations">Donations</a></li>
+            <li><a href="/inventory" class="active">Blood Inventory</a></li>
+            <li><a href="/tests">Tests</a></li>
+            <li><a href="/patients">Patients</a></li>
+            <li><a href="/requests">Requests</a></li>
+            <li><a href="/hospitals">Hospitals</a></li>
+            <li><a href="/staff">Staff</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Blood Inventory</h1>
+            <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+
+        <div class="card" style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; padding: 15px;">
+            <label style="font-weight: 500;">Filter by Blood Type:</label>
+            <select id="filterType" class="form-control" style="width: auto;">
+                <option value="">All</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+            </select>
+
+            <label style="font-weight: 500; margin-left: 20px;">Filter by Status:</label>
+            <select id="filterStatus" class="form-control" style="width: auto;">
+                <option value="">All</option>
+                <option value="Available">Available</option>
+                <option value="Used">Used</option>
+                <option value="Expired">Expired</option>
+                <option value="Testing">Testing</option>
+                <option value="Unsafe">Unsafe</option>
+            </select>
+
+            <button class="btn btn-primary" onclick="loadInventory()" style="margin-left: 20px;">Filter</button>
+        </div>
+
+        <div class="card">
+            <h2>All Blood Bags</h2>
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Bag ID</th>
+                        <th>Blood Type</th>
+                        <th>Collection Date</th>
+                        <th>Expiry Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTable">
+                    <tr><td colspan="6">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        async function loadInventory() {
+            const type = document.getElementById('filterType').value;
+            const status = document.getElementById('filterStatus').value;
+            let url = '/inventory';
+            const params = new URLSearchParams();
+            if (type) params.append('Blood_Type', type);
+            if (status) params.append('Status', status);
+            if (params.toString()) url += `?${params.toString()}`;
+
+            try {
+                const data = await fetchAPI(url);
+                const tbody = document.getElementById('inventoryTable');
+                tbody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No blood bags found</td></tr>';
+                    return;
+                }
+
+                data.forEach(bag => {
+                    const statusClass = getBadgeClass(bag.Status);
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${bag.Bag_ID}</td>
+                            <td><strong>${bag.Blood_Type}</strong></td>
+                            <td>${new Date(bag.Collection_Date).toLocaleDateString()}</td>
+                            <td>${new Date(bag.Expiry_Date).toLocaleDateString()}</td>
+                            <td><span class="${statusClass}">${bag.Status}</span></td>
+                            <td>
+                                <select onchange="updateStatus(${bag.Bag_ID}, this.value)" class="form-control" style="width: auto; padding: 5px;">
+                                    <option value="">Change Status</option>
+                                    <option value="Available">Available</option>
+                                    <option value="Used">Used</option>
+                                    <option value="Expired">Expired</option>
+                                    <option value="Testing">Testing</option>
+                                    <option value="Unsafe">Unsafe</option>
+                                </select>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load inventory');
+            }
+        }
+
+        async function updateStatus(id, newStatus) {
+            if (!newStatus) return;
+            try {
+                await fetchAPI(`/inventory/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ Status: newStatus })
+                });
+                loadInventory();
+            } catch (err) {
+                alert('Failed to update status');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadInventory);
+    </script>
+</body>
+</html>

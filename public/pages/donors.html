@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donors - Blood Bank Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">🩸 Blood Bank</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/donors" class="active">Donors</a></li>
+            <li><a href="/donations">Donations</a></li>
+            <li><a href="/inventory">Blood Inventory</a></li>
+            <li><a href="/tests">Tests</a></li>
+            <li><a href="/patients">Patients</a></li>
+            <li><a href="/requests">Requests</a></li>
+            <li><a href="/hospitals">Hospitals</a></li>
+            <li><a href="/staff">Staff</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Donors Management</h1>
+            <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Add New Donor</h2>
+            <form id="addDonorForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Contact No</label>
+                    <input type="text" id="contact" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="date" id="dob" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" id="age" class="form-control" required>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primary">Add Donor</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Donor List</h2>
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Contact</th>
+                        <th>DOB</th>
+                        <th>Age</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="donorTable">
+                    <tr><td colspan="6">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        async function loadDonors() {
+            try {
+                const data = await fetchAPI('/donors');
+                const tbody = document.getElementById('donorTable');
+                tbody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No donors found</td></tr>';
+                    return;
+                }
+
+                data.forEach(donor => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${donor.Donor_ID}</td>
+                            <td>${donor.Name}</td>
+                            <td>${donor.Contact_No}</td>
+                            <td>${new Date(donor.Date_of_Birth).toLocaleDateString()}</td>
+                            <td>${donor.Age}</td>
+                            <td>
+                                <button class="btn btn-primary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteDonor(${donor.Donor_ID})">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load donors');
+            }
+        }
+
+        async function deleteDonor(id) {
+            if (!confirm('Are you sure you want to delete this donor?')) return;
+            try {
+                await fetchAPI(`/donors/${id}`, { method: 'DELETE' });
+                loadDonors();
+            } catch (err) {
+                alert('Failed to delete donor');
+            }
+        }
+
+        document.getElementById('addDonorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                Name: document.getElementById('name').value,
+                Contact_No: document.getElementById('contact').value,
+                Date_of_Birth: document.getElementById('dob').value,
+                Age: document.getElementById('age').value
+            };
+
+            try {
+                await fetchAPI('/donors', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                document.getElementById('addDonorForm').reset();
+                loadDonors();
+            } catch (err) {
+                alert('Failed to add donor');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', loadDonors);
+    </script>
+</body>
+</html>

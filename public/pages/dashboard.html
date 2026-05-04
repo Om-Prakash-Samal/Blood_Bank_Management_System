@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Blood Bank Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">🩸 Blood Bank</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard" class="active">Dashboard</a></li>
+            <li><a href="/donors">Donors</a></li>
+            <li><a href="/donations">Donations</a></li>
+            <li><a href="/inventory">Blood Inventory</a></li>
+            <li><a href="/tests">Tests</a></li>
+            <li><a href="/patients">Patients</a></li>
+            <li><a href="/requests">Requests</a></li>
+            <li><a href="/hospitals">Hospitals</a></li>
+            <li><a href="/staff">Staff</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Dashboard</h1>
+            <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Donors</h3>
+                <div class="value" id="totalDonors">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending Requests</h3>
+                <div class="value" id="pendingRequests">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Expiring Units (7 days)</h3>
+                <div class="value" id="expiringUnits">0</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Available Blood by Group</h2>
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Blood Group</th>
+                        <th>Units Available</th>
+                    </tr>
+                </thead>
+                <tbody id="bloodGroupTable">
+                    <tr><td colspan="2">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        async function loadDashboard() {
+            try {
+                const data = await fetchAPI('/dashboard');
+                
+                document.getElementById('totalDonors').innerText = data.totalDonors;
+                document.getElementById('pendingRequests').innerText = data.pendingRequests;
+                document.getElementById('expiringUnits').innerText = data.expiringUnits;
+
+                const tbody = document.getElementById('bloodGroupTable');
+                tbody.innerHTML = '';
+                
+                if (data.availableBlood.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2">No blood units available</td></tr>';
+                } else {
+                    data.availableBlood.forEach(item => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><span class="badge" style="background: var(--primary); color: white;">${item.Blood_Type}</span></td>
+                                <td>${item.count} Units</td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load dashboard data');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>

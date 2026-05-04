@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requests - Blood Bank Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">🩸 Blood Bank</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/donors">Donors</a></li>
+            <li><a href="/donations">Donations</a></li>
+            <li><a href="/inventory">Blood Inventory</a></li>
+            <li><a href="/tests">Tests</a></li>
+            <li><a href="/patients">Patients</a></li>
+            <li><a href="/requests" class="active">Requests</a></li>
+            <li><a href="/hospitals">Hospitals</a></li>
+            <li><a href="/staff">Staff</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Blood Requests</h1>
+            <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Create New Request</h2>
+            <form id="addRequestForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label>Patient</label>
+                    <select id="patientId" class="form-control" required>
+                        <option value="">Select Patient...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Hospital</label>
+                    <select id="hospitalId" class="form-control" required>
+                        <option value="">Select Hospital...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Request Date</label>
+                    <input type="date" id="requestDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Urgency</label>
+                    <select id="urgency" class="form-control" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primary">Create Request</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Manage Requests</h2>
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Req ID</th>
+                        <th>Date</th>
+                        <th>Patient</th>
+                        <th>Blood Needed</th>
+                        <th>Hospital</th>
+                        <th>Urgency</th>
+                        <th>Status</th>
+                        <th>Assign Bag (Available Only)</th>
+                    </tr>
+                </thead>
+                <tbody id="requestTable">
+                    <tr><td colspan="8">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        let availableBags = [];
+
+        async function loadSelects() {
+            try {
+                const [patients, hospitals, bags] = await Promise.all([
+                    fetchAPI('/patients'),
+                    fetchAPI('/hospitals'),
+                    fetchAPI('/inventory?Status=Available')
+                ]);
+
+                availableBags = bags;
+
+                const patientSelect = document.getElementById('patientId');
+                patients.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.Patient_ID;
+                    option.textContent = `${p.Name} (${p.Blood_Type_Needed})`;
+                    patientSelect.appendChild(option);
+                });
+
+                const hospitalSelect = document.getElementById('hospitalId');
+                hospitals.forEach(h => {
+                    const option = document.createElement('option');
+                    option.value = h.Hospital_ID;
+                    option.textContent = h.Name;
+                    hospitalSelect.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Failed to load selects data');
+            }
+        }
+
+        async function loadRequests() {
+            try {
+                const data = await fetchAPI('/requests');
+                const tbody = document.getElementById('requestTable');
+                tbody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8">No requests found</td></tr>';
+                    return;
+                }
+
+                data.forEach(r => {
+                    const statusClass = getBadgeClass(r.Status);
+                    let assignHtml = '-';
+                    
+                    if (r.Status === 'Pending') {
+                        // Filter bags by blood type needed by patient
+                        const compatibleBags = availableBags.filter(b => b.Blood_Type === r.Blood_Type_Needed);
+                        
+                        let options = '<option value="">Select Bag...</option>';
+                        compatibleBags.forEach(b => {
+                            options += `<option value="${b.Bag_ID}">Bag ID: ${b.Bag_ID}</option>`;
+                        });
+
+                        assignHtml = `
+                            <div style="display: flex; gap: 5px;">
+                                <select id="assign_bag_${r.Request_ID}" class="form-control" style="width: auto; padding: 5px;">
+                                    ${options}
+                                </select>
+                                <button class="btn btn-primary" style="padding: 5px 10px;" onclick="assignBag(${r.Request_ID})">Assign</button>
+                            </div>
+                        `;
+                    } else if (r.Bag_ID) {
+                        assignHtml = `Assigned Bag ID: ${r.Bag_ID}`;
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${r.Request_ID}</td>
+                            <td>${new Date(r.Request_Date).toLocaleDateString()}</td>
+                            <td>${r.PatientName || 'N/A'}</td>
+                            <td><strong>${r.Blood_Type_Needed || 'N/A'}</strong></td>
+                            <td>${r.HospitalName || 'N/A'}</td>
+                            <td>${r.Urgency}</td>
+                            <td><span class="${statusClass}">${r.Status}</span></td>
+                            <td>${assignHtml}</td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load requests');
+            }
+        }
+
+        async function assignBag(requestId) {
+            const select = document.getElementById(`assign_bag_${requestId}`);
+            const bagId = select.value;
+            if (!bagId) {
+                alert('Please select a bag to assign');
+                return;
+            }
+
+            try {
+                await fetchAPI(`/requests/${requestId}/assign`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ Bag_ID: bagId, Status: 'Approved' })
+                });
+                alert('Bag assigned successfully!');
+                
+                // Refresh data
+                await loadSelects();
+                loadRequests();
+            } catch (err) {
+                alert('Failed to assign bag');
+            }
+        }
+
+        document.getElementById('addRequestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                Patient_ID: document.getElementById('patientId').value,
+                Hospital_ID: document.getElementById('hospitalId').value,
+                Request_Date: document.getElementById('requestDate').value,
+                Urgency: document.getElementById('urgency').value
+            };
+
+            try {
+                await fetchAPI('/requests', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                document.getElementById('addRequestForm').reset();
+                loadRequests();
+            } catch (err) {
+                alert('Failed to create request');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('requestDate').valueAsDate = new Date();
+            loadSelects().then(() => loadRequests());
+        });
+    </script>
+</body>
+</html>

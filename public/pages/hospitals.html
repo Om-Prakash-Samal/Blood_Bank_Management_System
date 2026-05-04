@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospitals - Blood Bank Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">🩸 Blood Bank</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/donors">Donors</a></li>
+            <li><a href="/donations">Donations</a></li>
+            <li><a href="/inventory">Blood Inventory</a></li>
+            <li><a href="/tests">Tests</a></li>
+            <li><a href="/patients">Patients</a></li>
+            <li><a href="/requests">Requests</a></li>
+            <li><a href="/hospitals" class="active">Hospitals</a></li>
+            <li><a href="/staff">Staff</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Hospitals Management</h1>
+            <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Add New Hospital</h2>
+            <form id="addHospitalForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label>Hospital Name</label>
+                    <input type="text" id="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="location" class="form-control" required>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primary">Add Hospital</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Hospitals List</h2>
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Hospital ID</th>
+                        <th>Name</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody id="hospitalTable">
+                    <tr><td colspan="3">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        async function loadHospitals() {
+            try {
+                const data = await fetchAPI('/hospitals');
+                const tbody = document.getElementById('hospitalTable');
+                tbody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No hospitals found</td></tr>';
+                    return;
+                }
+
+                data.forEach(h => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${h.Hospital_ID}</td>
+                            <td>${h.Name}</td>
+                            <td>${h.Location}</td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load hospitals');
+            }
+        }
+
+        document.getElementById('addHospitalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                Name: document.getElementById('name').value,
+                Location: document.getElementById('location').value
+            };
+
+            try {
+                await fetchAPI('/hospitals', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                document.getElementById('addHospitalForm').reset();
+                loadHospitals();
+            } catch (err) {
+                alert('Failed to add hospital');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', loadHospitals);
+    </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tests - Blood Bank Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">🩸 Blood Bank</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/donors">Donors</a></li>
+            <li><a href="/donations">Donations</a></li>
+            <li><a href="/inventory">Blood Inventory</a></li>
+            <li><a href="/tests" class="active">Tests</a></li>
+            <li><a href="/patients">Patients</a></li>
+            <li><a href="/requests">Requests</a></li>
+            <li><a href="/hospitals">Hospitals</a></li>
+            <li><a href="/staff">Staff</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Blood Testing</h1>
+            <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Add Test Result</h2>
+            <form id="addTestForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label>Blood Bag ID</label>
+                    <select id="bagId" class="form-control" required>
+                        <option value="">Select Testing Bag...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Laboratory (ID)</label>
+                    <input type="number" id="labId" class="form-control" placeholder="Enter Lab ID (e.g. 1)" required>
+                </div>
+                <div class="form-group">
+                    <label>Test Type</label>
+                    <input type="text" id="testType" class="form-control" placeholder="e.g. HIV, Hepatitis B, Syphilis" required>
+                </div>
+                <div class="form-group">
+                    <label>Result</label>
+                    <select id="result" class="form-control" required>
+                        <option value="">Select...</option>
+                        <option value="Negative">Negative (Safe)</option>
+                        <option value="Positive">Positive (Unsafe)</option>
+                    </select>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primary">Save Test Result</button>
+                    <p style="font-size: 0.9rem; margin-top: 10px; color: var(--gray);">Note: Adding a Negative result will mark the bag as Available. Positive will mark it as Unsafe.</p>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Test Results History</h2>
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Test ID</th>
+                        <th>Bag ID</th>
+                        <th>Blood Type</th>
+                        <th>Lab ID</th>
+                        <th>Test Type</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="testTable">
+                    <tr><td colspan="6">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        async function loadBags() {
+            try {
+                const data = await fetchAPI('/inventory?Status=Testing');
+                const select = document.getElementById('bagId');
+                data.forEach(bag => {
+                    const option = document.createElement('option');
+                    option.value = bag.Bag_ID;
+                    option.textContent = `Bag ID: ${bag.Bag_ID} (${bag.Blood_Type})`;
+                    select.appendChild(option);
+                });
+            } catch (err) {
+                console.error('Failed to load bags for testing');
+            }
+        }
+
+        async function loadTests() {
+            try {
+                const data = await fetchAPI('/tests');
+                const tbody = document.getElementById('testTable');
+                tbody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No tests found</td></tr>';
+                    return;
+                }
+
+                data.forEach(t => {
+                    const resClass = getBadgeClass(t.Result);
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${t.Test_ID}</td>
+                            <td>${t.Bag_ID}</td>
+                            <td>${t.Blood_Type || 'N/A'}</td>
+                            <td>${t.Lab_ID || 'N/A'}</td>
+                            <td>${t.Test_Type}</td>
+                            <td><span class="${resClass}">${t.Result}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load tests');
+            }
+        }
+
+        document.getElementById('addTestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                Bag_ID: document.getElementById('bagId').value,
+                Lab_ID: document.getElementById('labId').value,
+                Test_Type: document.getElementById('testType').value,
+                Result: document.getElementById('result').value
+            };
+
+            try {
+                await fetchAPI('/tests', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                alert('Test result saved successfully!');
+                document.getElementById('addTestForm').reset();
+                // Reload bag select to remove the tested bag
+                document.getElementById('bagId').innerHTML = '<option value="">Select Testing Bag...</option>';
+                loadBags();
+                loadTests();
+            } catch (err) {
+                alert('Failed to add test');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBags();
+            loadTests();
+        });
+    </script>
+</body>
+</html>

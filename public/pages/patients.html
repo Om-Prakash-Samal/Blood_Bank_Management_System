@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patients - Blood Bank Management</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="brand">🩸 Blood Bank</div>
+        <ul class="nav-links">
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/donors">Donors</a></li>
+            <li><a href="/donations">Donations</a></li>
+            <li><a href="/inventory">Blood Inventory</a></li>
+            <li><a href="/tests">Tests</a></li>
+            <li><a href="/patients" class="active">Patients</a></li>
+            <li><a href="/requests">Requests</a></li>
+            <li><a href="/hospitals">Hospitals</a></li>
+            <li><a href="/staff">Staff</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>Patient Management</h1>
+            <button id="logoutBtn" class="btn btn-logout">Logout</button>
+        </div>
+
+        <div class="card">
+            <h2>Add New Patient</h2>
+            <form id="addPatientForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="form-group">
+                    <label>Patient Name</label>
+                    <input type="text" id="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Blood Type Needed</label>
+                    <select id="bloodType" class="form-control" required>
+                        <option value="">Select...</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <button type="submit" class="btn btn-primary">Add Patient</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Patients List</h2>
+            <table style="margin-top: 15px;">
+                <thead>
+                    <tr>
+                        <th>Patient ID</th>
+                        <th>Name</th>
+                        <th>Blood Type Needed</th>
+                    </tr>
+                </thead>
+                <tbody id="patientTable">
+                    <tr><td colspan="3">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        async function loadPatients() {
+            try {
+                const data = await fetchAPI('/patients');
+                const tbody = document.getElementById('patientTable');
+                tbody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">No patients found</td></tr>';
+                    return;
+                }
+
+                data.forEach(p => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${p.Patient_ID}</td>
+                            <td>${p.Name}</td>
+                            <td><span class="badge" style="background: var(--primary); color: white;">${p.Blood_Type_Needed}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load patients');
+            }
+        }
+
+        document.getElementById('addPatientForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                Name: document.getElementById('name').value,
+                Blood_Type_Needed: document.getElementById('bloodType').value
+            };
+
+            try {
+                await fetchAPI('/patients', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                document.getElementById('addPatientForm').reset();
+                loadPatients();
+            } catch (err) {
+                alert('Failed to add patient');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', loadPatients);
+    </script>
+</body>
+</html>
