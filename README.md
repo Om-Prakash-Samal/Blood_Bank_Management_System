@@ -22,8 +22,8 @@ A fully functional Blood Bank Management System web application built with Node.
    - Insert a default admin account.
 
 **Default Admin Credentials:**
-- **Username**: admin
-- **Password**: admin123
+- **Username**: ``` admin ```
+- **Password**: ``` admin123 ```
 
 ## Configuration
 
