@@ -2,7 +2,7 @@
 
 A fully functional Blood Bank Management System web application built with Node.js, Express, and MySQL.
 
-## Features
+### Features
 - **Authentication**: JWT-based admin login system.
 - **Dashboard**: Overview of total donors, available blood units, pending requests, and expiring units.
 - **Donor Module**: Add, view, and delete donors.
@@ -13,7 +13,7 @@ A fully functional Blood Bank Management System web application built with Node.
 - **Blood Request Module**: Create requests, assign compatible available blood bags, and mark as Approved.
 - **Hospital & Staff Modules**: Manage hospitals and staff details.
 
-## Database Setup
+### Database Setup
 
 1. Open your MySQL client (e.g., MySQL Workbench).
 2. Execute the `schema.sql` file provided in the root directory. This will:
